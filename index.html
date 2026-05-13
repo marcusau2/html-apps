@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Boy Tetris</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #1a1a1a;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Press Start 2P', monospace;
+        }
+
+        .gameboy {
+            width: 400px;
+            height: 620px;
+            background: #C4C4A0;
+            border-radius: 20px 20px 40px 40px;
+            position: relative;
+            box-shadow: 
+                inset 4px 4px 8px rgba(255,255,255,0.3),
+                inset -4px -4px 8px rgba(0,0,0,0.2),
+                8px 8px 20px rgba(0,0,0,0.4);
+        }
+
+        .gameboy::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 8px;
+            background: #333;
+            border-radius: 4px;
+        }
+
+        .power-led {
+            position: absolute;
+            top: 55px;
+            left: 25px;
+            width: 12px;
+            height: 12px;
+            background: #0F380F;
+            border-radius: 50%;
+            box-shadow: inset 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .power-led.on {
+            background: #9BBC0F;
+            box-shadow: 0 0 10px #9BBC0F, inset 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .power-label {
+            position: absolute;
+            top: 70px;
+            left: 18px;
+            font-size: 8px;
+            color: #306230;
+            font-weight: bold;
+        }
+
+        .screen-bezel {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 280px;
+            height: 260px;
+            background: #333;
+            border-radius: 10px;
+            box-shadow: 
+                inset 4px 4px 8px rgba(0,0,0,0.5),
+                inset -4px -4px 8px rgba(255,255,255,0.1);
+        }
+
+        .dot-matrix-label {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 9px;
+            color: #666;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        .screen-container {
+            position: absolute;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 240px;
+            height: 180px;
+            background: #9BBC0F;
+            border: 3px solid #306230;
+            image-rendering: pixelated;
+        }
+
+        #gameCanvas {
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+        }
+
+        .scanlines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0,0,0,0.1) 0px,
+                rgba(0,0,0,0.1) 1px,
+                transparent 1px,
+                transparent 3px
+            );
+            pointer-events: none;
+        }
+
+        .nintendo-logo {
+            position: absolute;
+            top: 355px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 14px;
+            color: #306230;
+            font-weight: bold;
+            letter-spacing: 3px;
+        }
+
+        .gameboy-text {
+            position: absolute;
+            top: 375px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 18px;
+            color: #306230;
+            font-weight: bold;
+            letter-spacing: 5px;
+        }
+
+        .controls-area {
+            position: absolute;
+            top: 420px;
+            left: 0;
+            width: 100%;
+            height: 180px;
+        }
+
+        .dpad {
+            position: absolute;
+            left: 30px;
+            top: 30px;
+            width: 100px;
+            height: 100px;
+        }
+
+        .dpad-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 35px;
+            height: 35px;
+            background: #3a3a5c;
+            border-radius: 4px;
+            box-shadow: 
+                inset 2px 2px 4px rgba(255,255,255,0.2),
+                inset -2px -2px 4px rgba(0,0,0,0.4);
+        }
+
+        .dpad-up, .dpad-down, .dpad-left, .dpad-right {
+            position: absolute;
+            background: #3a3a5c;
+            border-radius: 4px;
+            box-shadow: 
+                inset 2px 2px 4px rgba(255,255,255,0.2),
+                inset -2px -2px 4px rgba(0,0,0,0.4);
+        }
+
+        .dpad-up {
+            width: 35px;
+            height: 45px;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .dpad-down {
+            width: 35px;
+            height: 45px;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .dpad-left {
+            width: 45px;
+            height: 35px;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .dpad-right {
+            width: 45px;
+            height: 35px;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .dpad-center::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 12px;
+            height: 12px;
+            background: #2a2a4c;
+            border-radius: 50%;
+            box-shadow: inset 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .ab-buttons {
+            position: absolute;
+            right: 35px;
+            top: 40px;
+            width: 110px;
+            height: 80px;
+        }
+
+        .btn-a, .btn-b {
+            width: 38px;
+            height: 38px;
+            background: #8B1A1A;
+            border-radius: 50%;
+            position: absolute;
+            box-shadow: 
+                inset 3px 3px 6px rgba(255,255,255,0.3),
+                inset -3px -3px 6px rgba(0,0,0,0.4),
+                2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .btn-a {
+            right: 0;
+            top: 20px;
+        }
+
+        .btn-b {
+            left: 0;
+            top: 20px;
+        }
+
+        .btn-a::after, .btn-b::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle, #a33 0%, #8B1A1A 70%);
+            border-radius: 50%;
+        }
+
+        .label-a, .label-b {
+            position: absolute;
+            font-size: 10px;
+            color: #306230;
+            font-weight: bold;
+        }
+
+        .label-a {
+            right: -5px;
+            top: -12px;
+        }
+
+        .label-b {
+            left: -5px;
+            top: -12px;
+        }
+
+        .select-start {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+        }
+
+        .btn-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .btn-select, .btn-start {
+            width: 50px;
+            height: 18px;
+            background: #5a5a7c;
+            border-radius: 10px;
+            transform: rotate(-25deg);
+            box-shadow: 
+                inset 2px 2px 4px rgba(255,255,255,0.2),
+                inset -2px -2px 4px rgba(0,0,0,0.4);
+            display: block;
+        }
+
+        .label-select, .label-start {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%) rotate(-25deg);
+            font-size: 7px;
+            color: #306230;
+            font-weight: bold;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .speaker-grill {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            width: 80px;
+            height: 50px;
+        }
+
+        .speaker-dot {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #333;
+            border-radius: 50%;
+            box-shadow: inset 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .speaker-dot:nth-child(1) { top: 0; left: 0; }
+        .speaker-dot:nth-child(2) { top: 0; left: 25px; }
+        .speaker-dot:nth-child(3) { top: 0; left: 50px; }
+        .speaker-dot:nth-child(4) { top: 20px; left: 12px; }
+        .speaker-dot:nth-child(5) { top: 20px; left: 37px; }
+        .speaker-dot:nth-child(6) { top: 20px; left: 62px; }
+
+        .ui-overlay {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            color: #0F380F;
+            font-size: 7px;
+            line-height: 1.5;
+        }
+
+        .ui-label {
+            font-size: 5px;
+            margin-bottom: 1px;
+        }
+
+        .ui-value {
+            font-size: 7px;
+            margin-bottom: 4px;
+        }
+
+        .next-piece-container {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            border: 2px solid #0F380F;
+            padding: 4px;
+            background: #9BBC0F;
+            width: 56px;
+            box-sizing: border-box;
+        }
+
+        .next-label {
+            font-size: 6px;
+            color: #0F380F;
+            text-align: center;
+            margin-bottom: 3px;
+            display: block;
+        }
+
+        #nextCanvas {
+            width: 48px;
+            height: 48px;
+            image-rendering: pixelated;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .game-over, .start-menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #0F380F;
+            color: #9BBC0F;
+            padding: 20px 30px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        .game-over {
+            display: none;
+        }
+
+        .start-menu {
+            display: none;
+        }
+
+        .start-menu h1 {
+            font-size: 16px;
+            margin-bottom: 20px;
+            letter-spacing: 3px;
+        }
+
+        .start-menu p {
+            font-size: 8px;
+            margin: 10px 0;
+        }
+
+        .start-menu .blink {
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        .game-over h2 {
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .game-over p {
+            font-size: 8px;
+        }
+
+        .mute-indicator {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #0F380F;
+            font-size: 6px;
+            display: none;
+            background: #9BBC0F;
+            padding: 2px 4px;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+
+    </style>
+</head>
+<body>
+    <div class="gameboy">
+        <div class="power-led" id="powerLed"></div>
+        <div class="power-label">Power</div>
+        
+        <div class="screen-bezel">
+            <div class="dot-matrix-label">DOT MATRIX WITH STEREO SOUND</div>
+            <div class="screen-container">
+                <canvas id="gameCanvas" width="160" height="144"></canvas>
+                <div class="scanlines"></div>
+                <div class="ui-overlay">
+                    <div class="ui-label">SCORE</div>
+                    <div class="ui-value" id="score">0</div>
+                    <div class="ui-label">LINES</div>
+                    <div class="ui-value" id="lines">0</div>
+                    <div class="ui-label">LEVEL</div>
+                    <div class="ui-value" id="level">1</div>
+                </div>
+                <div class="next-piece-container">
+                    <div class="mute-indicator" id="muteIndicator">MUTE</div>
+                    <div class="next-label">NEXT</div>
+                    <canvas id="nextCanvas" width="48" height="48"></canvas>
+                </div>
+                <div class="start-menu" id="startMenu">
+                    <h1>TETRIS</h1>
+                    <p class="blink">PRESS START</p>
+                    <p style="margin-top: 20px; font-size: 6px;">©1984 NINTENDO</p>
+                </div>
+                <div class="game-over" id="gameOver">
+                    <h2>GAME OVER</h2>
+                    <p>PRESS START</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="nintendo-logo">Nintendo</div>
+        <div class="gameboy-text">GAME BOY</div>
+        
+        <div class="controls-area">
+            <div class="dpad">
+                <div class="dpad-up" id="btnUp"></div>
+                <div class="dpad-down" id="btnDown"></div>
+                <div class="dpad-left" id="btnLeft"></div>
+                <div class="dpad-right" id="btnRight"></div>
+                <div class="dpad-center"></div>
+            </div>
+            
+            <div class="ab-buttons">
+                <div class="btn-b" id="btnB"></div>
+                <div class="btn-a" id="btnA"></div>
+                <div class="label-b">B</div>
+                <div class="label-a">A</div>
+            </div>
+            
+            <div class="select-start">
+                <div class="btn-wrapper">
+                    <div class="label-select">SELECT</div>
+                    <div class="btn-select" id="btnSelect"></div>
+                </div>
+                <div class="btn-wrapper">
+                    <div class="label-start">START</div>
+                    <div class="btn-start" id="btnStart"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="speaker-grill">
+            <div class="speaker-dot"></div>
+            <div class="speaker-dot"></div>
+            <div class="speaker-dot"></div>
+            <div class="speaker-dot"></div>
+            <div class="speaker-dot"></div>
+            <div class="speaker-dot"></div>
+        </div>
+    </div>
+
+    <script>
+        // Game Boy Tetris - Game Logic
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const nextCanvas = document.getElementById('nextCanvas');
+        const nextCtx = nextCanvas.getContext('2d');
+        
+        // Game Boy Audio System
+        let audioCtx = null;
+        let isMuted = false;
+        let musicPlaying = false;
+        let musicTimer = null;
+        let currentNoteIndex = 0;
+        
+        // Note frequencies (in Hz) for 4th, 5th and 6th octaves
+        const NOTES = {
+            'A4': 440.00, 'A#4': 466.16, 'B4': 493.88,
+            'C5': 523.25, 'C#5': 554.37, 'D5': 587.33, 'D#5': 622.25,
+            'E5': 659.25, 'F5': 698.46, 'F#5': 739.99, 'G5': 783.99,
+            'G#5': 830.61, 'A5': 880.00, 'A#5': 932.33, 'B5': 987.77,
+            'C6': 1046.50, 'C#6': 1108.73, 'D6': 1174.66, 'D#6': 1244.51,
+            'E6': 1318.51, 'F6': 1396.91, 'F#6': 1479.98, 'G6': 1567.98,
+            'G#6': 1661.22, 'A6': 1760.00, 'A#6': 1864.66, 'B6': 1975.64
+        };
+        
+        // Korobeiniki (Tetris Theme) melody - Actual Game Boy version
+        // Based on: https://github.com/robsoncouto/arduino-songs/blob/master/tetris/tetris.ino
+        const KOROBEINIKI = [
+            // Section A - Main theme
+            { note: 'E5', duration: 300 }, { note: 'B4', duration: 150 }, { note: 'C5', duration: 150 },
+            { note: 'D5', duration: 300 }, { note: 'C5', duration: 150 }, { note: 'B4', duration: 150 },
+            { note: 'A4', duration: 300 }, { note: 'A4', duration: 150 }, { note: 'C5', duration: 150 },
+            { note: 'E5', duration: 300 }, { note: 'D5', duration: 150 }, { note: 'C5', duration: 150 },
+            { note: 'B4', duration: 450 }, { note: 'C5', duration: 150 }, { note: 'D5', duration: 300 },
+            { note: 'E5', duration: 300 }, { note: 'C5', duration: 300 }, { note: 'A4', duration: 300 },
+            { note: 'A4', duration: 300 }, { note: 'REST', duration: 300 },
+            
+            // Section B
+            { note: 'REST', duration: 150 }, { note: 'D5', duration: 300 }, { note: 'F5', duration: 150 },
+            { note: 'A5', duration: 300 }, { note: 'G5', duration: 150 }, { note: 'F5', duration: 150 },
+            { note: 'E5', duration: 450 }, { note: 'C5', duration: 150 }, { note: 'E5', duration: 300 },
+            { note: 'D5', duration: 150 }, { note: 'C5', duration: 150 },
+            { note: 'B4', duration: 300 }, { note: 'B4', duration: 150 }, { note: 'C5', duration: 150 },
+            { note: 'D5', duration: 300 }, { note: 'E5', duration: 300 }, { note: 'C5', duration: 300 },
+            { note: 'A4', duration: 300 }, { note: 'A4', duration: 300 }, { note: 'REST', duration: 300 }
+        ];
+        
+        // Initialize audio context on user interaction
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+        
+        // Play a single note using square wave (Game Boy channel 1 & 2)
+        function playNote(frequency, duration, volume = 0.3) {
+            if (isMuted || !audioCtx) return;
+            
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            oscillator.type = 'square';
+            oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+            
+            gainNode.gain.setValueAtTime(volume, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration / 1000 - 0.05);
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            oscillator.start(audioCtx.currentTime);
+            oscillator.stop(audioCtx.currentTime + duration / 1000);
+        }
+        
+        // Play sound effect
+        function playSound(type) {
+            if (isMuted || !audioCtx) return;
+            
+            const now = audioCtx.currentTime;
+            
+            switch (type) {
+                case 'drop':
+                    // Short descending square wave
+                    const dropOsc = audioCtx.createOscillator();
+                    const dropGain = audioCtx.createGain();
+                    dropOsc.type = 'square';
+                    dropOsc.frequency.setValueAtTime(200, now);
+                    dropOsc.frequency.exponentialRampToValueAtTime(50, now + 0.1);
+                    dropGain.gain.setValueAtTime(0.2, now);
+                    dropGain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    dropOsc.connect(dropGain);
+                    dropGain.connect(audioCtx.destination);
+                    dropOsc.start(now);
+                    dropOsc.stop(now + 0.1);
+                    break;
+                    
+                case 'rotate':
+                    // Quick blip
+                    const rotateOsc = audioCtx.createOscillator();
+                    const rotateGain = audioCtx.createGain();
+                    rotateOsc.type = 'square';
+                    rotateOsc.frequency.setValueAtTime(600, now);
+                    rotateGain.gain.setValueAtTime(0.15, now);
+                    rotateGain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                    rotateOsc.connect(rotateGain);
+                    rotateGain.connect(audioCtx.destination);
+                    rotateOsc.start(now);
+                    rotateOsc.stop(now + 0.08);
+                    break;
+                    
+                case 'clear1':
+                    // Single line clear - ascending arpeggio
+                    playNote(523.25, 100, 0.3); // C5
+                    setTimeout(() => playNote(659.25, 100, 0.3), 80); // E5
+                    setTimeout(() => playNote(783.99, 150, 0.3), 160); // G5
+                    break;
+                    
+                case 'clear2':
+                    // Two lines - longer arpeggio
+                    playNote(523.25, 100, 0.3);
+                    setTimeout(() => playNote(659.25, 100, 0.3), 80);
+                    setTimeout(() => playNote(783.99, 100, 0.3), 160);
+                    setTimeout(() => playNote(1046.50, 200, 0.3), 240);
+                    break;
+                    
+                case 'clear3':
+                    // Three lines
+                    playNote(523.25, 100, 0.3);
+                    setTimeout(() => playNote(659.25, 100, 0.3), 80);
+                    setTimeout(() => playNote(783.99, 100, 0.3), 160);
+                    setTimeout(() => playNote(1046.50, 100, 0.3), 240);
+                    setTimeout(() => playNote(1318.51, 250, 0.3), 320);
+                    break;
+                    
+                case 'clear4':
+                    // Tetris! - dramatic chord
+                    playNote(523.25, 150, 0.3);
+                    setTimeout(() => playNote(783.99, 150, 0.3), 80);
+                    setTimeout(() => playNote(1046.50, 150, 0.3), 160);
+                    setTimeout(() => playNote(1567.98, 400, 0.3), 240);
+                    break;
+                    
+                case 'gameover':
+                    // Descending sad melody
+                    playNote(659.25, 300, 0.3);
+                    setTimeout(() => playNote(587.33, 300, 0.3), 280);
+                    setTimeout(() => playNote(523.25, 300, 0.3), 560);
+                    setTimeout(() => playNote(440.00, 400, 0.3), 840);
+                    setTimeout(() => playNote(392.00, 500, 0.3), 1120);
+                    break;
+                    
+                case 'levelup':
+                    // Victory fanfare
+                    playNote(783.99, 150, 0.3);
+                    setTimeout(() => playNote(987.77, 150, 0.3), 130);
+                    setTimeout(() => playNote(1174.66, 150, 0.3), 260);
+                    setTimeout(() => playNote(1567.98, 400, 0.3), 390);
+                    break;
+            }
+        }
+        
+        // Start playing the Korobeiniki theme
+        function startMusic() {
+            if (isMuted || !audioCtx) return;
+            
+            musicPlaying = true;
+            currentNoteIndex = 0;
+            playNextNote();
+        }
+        
+        // Play next note in the melody
+        function playNextNote() {
+            if (!musicPlaying || isMuted || !audioCtx) return;
+            
+            const note = KOROBEINIKI[currentNoteIndex];
+            
+            // Adjust duration based on level (faster at higher levels)
+            const speedMultiplier = Math.min(2.0, 1 + (level - 1) * 0.1);
+            const adjustedDuration = note.duration / speedMultiplier;
+            
+            // Only play if not a rest
+            if (note.note !== 'REST') {
+                const frequency = NOTES[note.note];
+                playNote(frequency, adjustedDuration, 0.25);
+            }
+            
+            currentNoteIndex++;
+            if (currentNoteIndex >= KOROBEINIKI.length) {
+                currentNoteIndex = 0;
+            }
+            
+            musicTimer = setTimeout(playNextNote, adjustedDuration);
+        }
+        
+        // Stop the music
+        function stopMusic() {
+            musicPlaying = false;
+            if (musicTimer) {
+                clearTimeout(musicTimer);
+            }
+        }
+        
+        // Game Boy palette
+        const COLORS = {
+            LIGHT: '#9BBC0F',
+            LIGHT_MID: '#8BAC0F',
+            DARK_MID: '#306230',
+            DARK: '#0F380F'
+        };
+        
+        // Tetromino definitions
+        const TETROMINOES = {
+            I: { shape: [[1,1,1,1]], color: COLORS.DARK },
+            O: { shape: [[1,1],[1,1]], color: COLORS.DARK },
+            T: { shape: [[0,1,0],[1,1,1]], color: COLORS.DARK },
+            S: { shape: [[0,1,1],[1,1,0]], color: COLORS.DARK },
+            Z: { shape: [[1,1,0],[0,1,1]], color: COLORS.DARK },
+            J: { shape: [[1,0,0],[1,1,1]], color: COLORS.DARK },
+            L: { shape: [[0,0,1],[1,1,1]], color: COLORS.DARK }
+        };
+        
+        const BOARD_WIDTH = 10;
+        const BOARD_HEIGHT = 20;
+        const BLOCK_SIZE = 7;
+        
+        let board = [];
+        let currentPiece = null;
+        let nextPiece = null;
+        let score = 0;
+        let lines = 0;
+        let level = 1;
+        let gameLoop = null;
+        let dropInterval = 1000;
+        let lastDrop = 0;
+        let gameOver = false;
+        let gameStarted = false;
+        let isPaused = false;
+        let flashLines = [];
+        let flashTimer = 0;
+        let lastLevel = 1;
+        
+        // Initialize board
+        function initBoard() {
+            board = [];
+            for (let y = 0; y < BOARD_HEIGHT; y++) {
+                board[y] = [];
+                for (let x = 0; x < BOARD_WIDTH; x++) {
+                    board[y][x] = 0;
+                }
+            }
+        }
+        
+        // Create a new piece
+        function createPiece(type) {
+            const tetromino = TETROMINOES[type];
+            return {
+                type: type,
+                shape: tetromino.shape.map(row => [...row]),
+                x: Math.floor(BOARD_WIDTH / 2) - Math.floor(tetromino.shape[0].length / 2),
+                y: 0,
+                color: tetromino.color
+            };
+        }
+        
+        // Get random tetromino type
+        function randomTetromino() {
+            const types = 'IOTSZJL';
+            return types[Math.floor(Math.random() * types.length)];
+        }
+        
+        // Draw a block with GB shading
+        function drawBlock(context, x, y, size, isFlash = false) {
+            const color = isFlash ? COLORS.LIGHT : COLORS.DARK;
+            const midColor = isFlash ? COLORS.LIGHT_MID : COLORS.DARK_MID;
+            
+            // Main fill
+            context.fillStyle = color;
+            context.fillRect(x * size, y * size, size, size);
+            
+            // Highlight (top-left)
+            context.fillStyle = COLORS.LIGHT_MID;
+            context.fillRect(x * size, y * size, size, 2);
+            context.fillRect(x * size, y * size, 2, size);
+            
+            // Shadow (bottom-right)
+            context.fillStyle = midColor;
+            context.fillRect(x * size, (y + 1) * size - 2, size, 2);
+            context.fillRect((x + 1) * size - 2, y * size, 2, size);
+            
+            // Center detail
+            context.fillStyle = color;
+            context.fillRect(x * size + 2, y * size + 2, size - 4, size - 4);
+            
+            // Inner highlight
+            context.fillStyle = COLORS.LIGHT;
+            context.fillRect(x * size + 3, y * size + 3, size - 6, size - 6);
+        }
+        
+        // Draw the board
+        function drawBoard() {
+            // Clear canvas with background color
+            ctx.fillStyle = COLORS.LIGHT;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid lines (subtle)
+            ctx.strokeStyle = COLORS.LIGHT_MID;
+            ctx.lineWidth = 0.5;
+            for (let x = 0; x <= BOARD_WIDTH; x++) {
+                ctx.beginPath();
+                ctx.moveTo(x * BLOCK_SIZE, 0);
+                ctx.lineTo(x * BLOCK_SIZE, BOARD_HEIGHT * BLOCK_SIZE);
+                ctx.stroke();
+            }
+            for (let y = 0; y <= BOARD_HEIGHT; y++) {
+                ctx.beginPath();
+                ctx.moveTo(0, y * BLOCK_SIZE);
+                ctx.lineTo(BOARD_WIDTH * BLOCK_SIZE, y * BLOCK_SIZE);
+                ctx.stroke();
+            }
+            
+            // Draw placed blocks
+            for (let y = 0; y < BOARD_HEIGHT; y++) {
+                for (let x = 0; x < BOARD_WIDTH; x++) {
+                    if (board[y][x]) {
+                        const isFlash = flashLines.includes(y);
+                        drawBlock(ctx, x, y, BLOCK_SIZE, isFlash);
+                    }
+                }
+            }
+        }
+        
+        // Draw current piece
+        function drawPiece() {
+            if (!currentPiece) return;
+            
+            const shape = currentPiece.shape;
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                    if (shape[y][x]) {
+                        drawBlock(ctx, currentPiece.x + x, currentPiece.y + y, BLOCK_SIZE);
+                    }
+                }
+            }
+        }
+        
+        // Draw ghost piece
+        function drawGhost() {
+            if (!currentPiece) return;
+            
+            let ghostY = currentPiece.y;
+            while (isValidPosition(currentPiece.shape, currentPiece.x, ghostY + 1)) {
+                ghostY++;
+            }
+            
+            const shape = currentPiece.shape;
+            ctx.fillStyle = COLORS.LIGHT_MID;
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                    if (shape[y][x]) {
+                        const px = (currentPiece.x + x) * BLOCK_SIZE;
+                        const py = (ghostY + y) * BLOCK_SIZE;
+                        ctx.strokeStyle = COLORS.DARK_MID;
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(px, py, BLOCK_SIZE, BLOCK_SIZE);
+                    }
+                }
+            }
+        }
+        
+        // Draw next piece
+        function drawNextPiece() {
+            nextCtx.fillStyle = COLORS.LIGHT;
+            nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+            
+            if (!nextPiece) return;
+            
+            const shape = nextPiece.shape;
+            const blockSize = 8;
+            const offsetX = Math.floor((nextCanvas.width - shape[0].length * blockSize) / 2);
+            const offsetY = Math.floor((nextCanvas.height - shape.length * blockSize) / 2);
+            
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                    if (shape[y][x]) {
+                        const drawX = offsetX + x * blockSize;
+                        const drawY = offsetY + y * blockSize;
+                        
+                        // Draw block directly on next canvas
+                        const color = COLORS.DARK;
+                        const midColor = COLORS.DARK_MID;
+                        
+                        // Main fill
+                        nextCtx.fillStyle = color;
+                        nextCtx.fillRect(drawX, drawY, blockSize, blockSize);
+                        
+                        // Highlight (top-left)
+                        nextCtx.fillStyle = COLORS.LIGHT_MID;
+                        nextCtx.fillRect(drawX, drawY, blockSize, 2);
+                        nextCtx.fillRect(drawX, drawY, 2, blockSize);
+                        
+                        // Shadow (bottom-right)
+                        nextCtx.fillStyle = midColor;
+                        nextCtx.fillRect(drawX, drawY + blockSize - 2, blockSize, 2);
+                        nextCtx.fillRect(drawX + blockSize - 2, drawY, 2, blockSize);
+                        
+                        // Center detail
+                        nextCtx.fillStyle = color;
+                        nextCtx.fillRect(drawX + 2, drawY + 2, blockSize - 4, blockSize - 4);
+                        
+                        // Inner highlight
+                        nextCtx.fillStyle = COLORS.LIGHT;
+                        nextCtx.fillRect(drawX + 3, drawY + 3, blockSize - 6, blockSize - 6);
+                    }
+                }
+            }
+        }
+        
+        // Check if position is valid
+        function isValidPosition(shape, offsetX, offsetY) {
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                    if (shape[y][x]) {
+                        const newX = offsetX + x;
+                        const newY = offsetY + y;
+                        
+                        if (newX < 0 || newX >= BOARD_WIDTH || newY >= BOARD_HEIGHT) {
+                            return false;
+                        }
+                        
+                        if (newY >= 0 && board[newY][newX]) {
+                            return false;
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+        
+        // Rotate piece
+        function rotatePiece() {
+            const shape = currentPiece.shape;
+            const rows = shape.length;
+            const cols = shape[0].length;
+            
+            // Create rotated shape
+            const rotated = [];
+            for (let x = 0; x < cols; x++) {
+                rotated[x] = [];
+                for (let y = rows - 1; y >= 0; y--) {
+                    rotated[x][rows - 1 - y] = shape[y][x];
+                }
+            }
+            
+            // Try wall kicks
+            const kicks = [0, -1, 1, -2, 2];
+            for (const kick of kicks) {
+                if (isValidPosition(rotated, currentPiece.x + kick, currentPiece.y)) {
+                    currentPiece.shape = rotated;
+                    currentPiece.x += kick;
+                    playSound('rotate');
+                    return;
+                }
+            }
+        }
+        
+        // Move piece
+        function movePiece(dx, dy) {
+            if (isValidPosition(currentPiece.shape, currentPiece.x + dx, currentPiece.y + dy)) {
+                currentPiece.x += dx;
+                currentPiece.y += dy;
+                return true;
+            }
+            return false;
+        }
+        
+        // Hard drop
+        function hardDrop() {
+            while (movePiece(0, 1)) {
+                score += 2;
+            }
+            playSound('drop');
+            lockPiece();
+        }
+        
+        // Lock piece to board
+        function lockPiece() {
+            const shape = currentPiece.shape;
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                    if (shape[y][x]) {
+                        const boardY = currentPiece.y + y;
+                        const boardX = currentPiece.x + x;
+                        if (boardY >= 0) {
+                            board[boardY][boardX] = 1;
+                        }
+                    }
+                }
+            }
+            
+            // Check for line clears
+            checkLines();
+            
+            // Spawn new piece
+            currentPiece = nextPiece;
+            nextPiece = createPiece(randomTetromino());
+            drawNextPiece();
+            
+            // Check game over
+            if (!isValidPosition(currentPiece.shape, currentPiece.x, currentPiece.y)) {
+                gameOver = true;
+                stopMusic();
+                playSound('gameover');
+                document.getElementById('gameOver').style.display = 'block';
+            }
+        }
+        
+        // Check for completed lines
+        function checkLines() {
+            const linesToClear = [];
+            
+            for (let y = 0; y < BOARD_HEIGHT; y++) {
+                let full = true;
+                for (let x = 0; x < BOARD_WIDTH; x++) {
+                    if (!board[y][x]) {
+                        full = false;
+                        break;
+                    }
+                }
+                if (full) {
+                    linesToClear.push(y);
+                }
+            }
+            
+            if (linesToClear.length > 0) {
+                flashLines = linesToClear;
+                flashTimer = 10;
+                
+                // Play sound based on number of lines
+                const soundTypes = ['', 'clear1', 'clear2', 'clear3', 'clear4'];
+                playSound(soundTypes[linesToClear.length]);
+                
+                // Remove lines after flash
+                setTimeout(() => {
+                    for (const y of linesToClear) {
+                        board.splice(y, 1);
+                        board.unshift(new Array(BOARD_WIDTH).fill(0));
+                    }
+                    
+                    // Update score
+                    const points = [0, 100, 300, 500, 800];
+                    score += points[linesToClear.length] * level;
+                    lines += linesToClear.length;
+                    
+                    // Level up every 10 lines
+                    const newLevel = Math.floor(lines / 10) + 1;
+                    if (newLevel > level) {
+                        level = newLevel;
+                        dropInterval = Math.max(100, 1000 - (level - 1) * 100);
+                        playSound('levelup');
+                    }
+                    
+                    updateUI();
+                    flashLines = [];
+                }, 150);
+            }
+        }
+        
+        // Update UI
+        function updateUI() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('lines').textContent = lines;
+            document.getElementById('level').textContent = level;
+        }
+        
+        // Main game loop
+        function update(timestamp) {
+            if (gameOver) return;
+            
+            if (!isPaused) {
+                if (timestamp - lastDrop > dropInterval) {
+                    if (!movePiece(0, 1)) {
+                        lockPiece();
+                    }
+                    lastDrop = timestamp;
+                }
+                
+                // Update flash timer
+                if (flashTimer > 0) {
+                    flashTimer--;
+                }
+                
+                drawBoard();
+                drawGhost();
+                drawPiece();
+            }
+            
+            gameLoop = requestAnimationFrame(update);
+        }
+        
+        // Start/restart game
+        function startGame() {
+            initAudio();
+            
+            // Reset everything
+            initBoard();
+            score = 0;
+            lines = 0;
+            level = 1;
+            dropInterval = 1000;
+            gameOver = false;
+            isPaused = false;
+            flashLines = [];
+            flashTimer = 0;
+            gameStarted = true;
+            
+            currentPiece = createPiece(randomTetromino());
+            nextPiece = createPiece(randomTetromino());
+            
+            updateUI();
+            drawNextPiece();
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('startMenu').style.display = 'none';
+            
+            // Start music
+            startMusic();
+            
+            if (gameLoop) {
+                cancelAnimationFrame(gameLoop);
+            }
+            lastDrop = performance.now();
+            gameLoop = requestAnimationFrame(update);
+        }
+        
+        // Toggle mute
+        function toggleMute() {
+            isMuted = !isMuted;
+            
+            // Update mute indicator
+            const muteIndicator = document.getElementById('muteIndicator');
+            if (muteIndicator) {
+                muteIndicator.style.display = isMuted ? 'block' : 'none';
+            }
+            
+            if (isMuted) {
+                stopMusic();
+            } else if (!gameOver && !isPaused) {
+                startMusic();
+            }
+        }
+        
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (gameOver) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    startGame();
+                }
+                return;
+            }
+            
+            // Mute toggle (O key)
+            if (e.key === 'o' || e.key === 'O') {
+                toggleMute();
+                return;
+            }
+            
+            // Start/Pause (P or Escape key - dual use like original Game Boy)
+            if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
+                if (!gameStarted) {
+                    startGame();
+                } else {
+                    isPaused = !isPaused;
+                    if (isPaused) {
+                        stopMusic();
+                    } else {
+                        startMusic();
+                    }
+                }
+                return;
+            }
+            
+            switch(e.key) {
+                case 'ArrowLeft':
+                case 'a':
+                case 'A':
+                    movePiece(-1, 0);
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                case 'D':
+                    movePiece(1, 0);
+                    break;
+                case 'ArrowDown':
+                case 's':
+                case 'S':
+                    movePiece(0, 1);
+                    score += 1;
+                    updateUI();
+                    break;
+                case 'ArrowUp':
+                case 'z':
+                case 'Z':
+                case 'x':
+                case 'X':
+                    rotatePiece();
+                    break;
+                case ' ':
+                    hardDrop();
+                    break;
+            }
+        });
+        
+        // Button click handlers
+        document.getElementById('btnStart').addEventListener('click', () => {
+            if (!gameStarted) {
+                // Start the game
+                startGame();
+            } else {
+                // Toggle pause (dual use like original Game Boy)
+                isPaused = !isPaused;
+                if (isPaused) {
+                    stopMusic();
+                } else {
+                    startMusic();
+                }
+            }
+        });
+        
+        document.getElementById('btnSelect').addEventListener('click', () => {
+            toggleMute();
+        });
+        
+        document.getElementById('btnLeft').addEventListener('click', () => {
+            if (!gameOver && !isPaused) movePiece(-1, 0);
+        });
+        document.getElementById('btnRight').addEventListener('click', () => {
+            if (!gameOver && !isPaused) movePiece(1, 0);
+        });
+        document.getElementById('btnDown').addEventListener('click', () => {
+            if (!gameOver && !isPaused) {
+                movePiece(0, 1);
+                score += 1;
+                updateUI();
+            }
+        });
+        document.getElementById('btnUp').addEventListener('click', () => {
+            if (!gameOver && !isPaused) rotatePiece();
+        });
+        document.getElementById('btnA').addEventListener('click', () => {
+            if (!gameOver && !isPaused) rotatePiece();
+        });
+        document.getElementById('btnB').addEventListener('click', () => {
+            if (!gameOver && !isPaused) hardDrop();
+        });
+        
+        // Initialize - show start menu
+        function init() {
+            // Turn on power LED
+            document.getElementById('powerLed').classList.add('on');
+            
+            // Show start menu
+            document.getElementById('startMenu').style.display = 'block';
+            
+            // Draw initial screen
+            initBoard();
+            drawBoard();
+        }
+        
+        init();
+        
+        // Focus for keyboard input
+        window.addEventListener('click', () => {
+            window.focus();
+        });
+    </script>
+</body>
+</html>
