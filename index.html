@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Apps & Games</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #1a1a2e;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: system-ui, sans-serif;
+            color: #fff;
+        }
+        .container {
+            text-align: center;
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            color: #00d4ff;
+        }
+        .apps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            max-width: 800px;
+            padding: 1rem;
+        }
+        .app-card {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 2rem;
+            text-decoration: none;
+            color: #fff;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid #0f3460;
+        }
+        .app-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.2);
+            border-color: #00d4ff;
+        }
+        .app-card h2 {
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+        }
+        .app-card p {
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Games & Apps</h1>
+        <div class="apps-grid">
+            <a href="games/tetris/" class="app-card">
+                <h2>Game Boy Tetris</h2>
+                <p>Classic Tetris with authentic Game Boy styling</p>
+            </a>
+        </div>
+    </div>
+</body>
+</html>
